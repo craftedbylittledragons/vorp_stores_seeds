@@ -55,8 +55,78 @@ Config.Stores = {
         RandomPrices = false,
         StoreOpen = 7, -- am
         StoreClose = 21 -- pm
-
     }, 
+-----------------------------------------------------------------------------
+--------------------------------------Vanhorn--------------------------------
+-----------------------------------------------------------------------------  
+}
+-----------------------------------------------------------------------------
+-------------------------------------ITEMS-----------------------------------
+-----------------------------------------------------------------------------
+    -- ItemLable = translate here
+    -- itemName = same as in your databse
+    -- curencytype = "cash" or "gold" only use one.
+    -- price = numbers only
+    -- desc = a description of the item
+    -- category = where the item will be displayed at 
+SeedsMarketItems_SELL = {
+    --Aromatics
+        { itemLabel = "Alaskan Ginseng Seeds", itemName = "Alaskan_Ginseng_Seed", currencyType = "cash", sellprice = 1, randomprice = math.random( 0, 1), desc = " A handfull of Alaskan Ginseng Seeds", category = "Aromatics" },
+ 
+    --Fruits
+        { itemLabel = "Black Currant Seeds", itemName = "Black_Currant_Seed", currencyType = "cash", sellprice = 1, randomprice = math.random( 0, 1), desc = " A handfull of Black Currant Seeds ", category = "Fruits" },
+    
+    -- Medicinal
+        { itemLabel = "Yucca Seeds", itemName = "yucca", currencyType = "cash", sellprice = 1, randomprice = math.random( 0, 1), desc = " A handfull of Yucca Seeds ", category = "Medicinal" },
+
+
+    --Roots
+        { itemLabel = "Onion Seeds", itemName = "Onion_Seed", currencyType = "cash", sellprice = 1, randomprice = math.random( 0, 1), desc = " A handfull of Onion Seeds", category = "Roots" },
+        { itemLabel = "Carrot Seeds", itemName = "Carrot_Seed", currencyType = "cash", sellprice = 1, randomprice = math.random( 0, 1), desc = " A handfull of Carrot Seeds ", category = "Roots" },
+     
+    -- Misc
+        { itemLabel = "Indian Tobbaco Seeds", itemName = "Indian_Tobbaco_Seed", currencyType = "cash", sellprice = 1, randomprice = math.random( 0, 1), desc = " A handfull of Indian Tobbaco Seeds", category = "Misc" },
+    
+}
+   
+-----------------------------------------------------------------------------
+--------------------------------------SELL ITEMS ----------------------------
+-----------------------------------------------------------------------------
+Config.SellItems = {
+      
+    -----------------------------------------------------------------------------
+    --------------------------------------Armadillo------------------------------
+    ----------------------------------------------------------------------------- 
+        ArmadilloSeedsMarket = SeedsMarketItems_SELL, 
+    -----------------------------------------------------------------------------
+    --------------------------------------Blackwater------------------------------
+    -----------------------------------------------------------------------------     
+        BlackwaterSeedsMarket = SeedsMarketItems_SELL, 
+    -----------------------------------------------------------------------------
+    --------------------------------------Rhodes---------------------------------
+    -----------------------------------------------------------------------------         
+        RhodesFarmersMarket = FarmersMarketItems_SELL, 
+    -----------------------------------------------------------------------------
+    --------------------------------------St-Denis-------------------------------
+    -----------------------------------------------------------------------------         
+        StDenisSeedsMarket = SeedsMarketItems_SELL, 
+    -----------------------------------------------------------------------------
+    --------------------------------------Strawberry-----------------------------
+    -----------------------------------------------------------------------------     
+        StrawbSeedsMarket = SeedsMarketItems_SELL,         
+    -----------------------------------------------------------------------------
+    --------------------------------------Tumbleweed-----------------------------
+    -----------------------------------------------------------------------------
+ 
+    -----------------------------------------------------------------------------
+    --------------------------------------Valentine------------------------------
+    -----------------------------------------------------------------------------        
+        ValSeedsMarket = SeedsMarketItems_SELL, 
+    -----------------------------------------------------------------------------
+    --------------------------------------Vanhorn--------------------------------
+    -----------------------------------------------------------------------------        
+        VanSeedsMarket = SeedsMarketItems_SELL,  
+        
 }
 
 
