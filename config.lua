@@ -32,9 +32,9 @@ Config.WebhookAvatar = ""
 --- STORES ---
 Config.Stores = {
 
------------------------------------------------------------------------------
---------------------------------------Valentine------------------------------
------------------------------------------------------------------------------
+    -----------------------------------------------------------------------------
+    --------------------------------------Valentine------------------------------
+    -----------------------------------------------------------------------------     
  
     
     ValSeeds = {
@@ -55,10 +55,7 @@ Config.Stores = {
         RandomPrices = false,
         StoreOpen = 7, -- am
         StoreClose = 21 -- pm
-    }, 
------------------------------------------------------------------------------
---------------------------------------Vanhorn--------------------------------
------------------------------------------------------------------------------  
+    },   
 }
 -----------------------------------------------------------------------------
 -------------------------------------ITEMS-----------------------------------
@@ -70,23 +67,11 @@ Config.Stores = {
     -- desc = a description of the item
     -- category = where the item will be displayed at 
 SeedsMarketItems_SELL = {
-    --Aromatics
-        { itemLabel = "Alaskan Ginseng Seeds", itemName = "Alaskan_Ginseng_Seed", currencyType = "cash", sellprice = 1, randomprice = math.random( 0, 1), desc = " A handfull of Alaskan Ginseng Seeds", category = "Aromatics" },
- 
-    --Fruits
-        { itemLabel = "Black Currant Seeds", itemName = "Black_Currant_Seed", currencyType = "cash", sellprice = 1, randomprice = math.random( 0, 1), desc = " A handfull of Black Currant Seeds ", category = "Fruits" },
-    
-    -- Medicinal
-        { itemLabel = "Yucca Seeds", itemName = "yucca", currencyType = "cash", sellprice = 1, randomprice = math.random( 0, 1), desc = " A handfull of Yucca Seeds ", category = "Medicinal" },
-
-
-    --Roots
-        { itemLabel = "Onion Seeds", itemName = "Onion_Seed", currencyType = "cash", sellprice = 1, randomprice = math.random( 0, 1), desc = " A handfull of Onion Seeds", category = "Roots" },
-        { itemLabel = "Carrot Seeds", itemName = "Carrot_Seed", currencyType = "cash", sellprice = 1, randomprice = math.random( 0, 1), desc = " A handfull of Carrot Seeds ", category = "Roots" },
+    -- Herbs
+    { itemLabel = "English Mace Seed", itemName = "English_Mace_Seed", currencyType = "cash", item_price = .25, randomprice = math.random(30, 55), desc = "Buy English Mace Seed", category = "Herbs" }, 
      
-    -- Misc
-        { itemLabel = "Indian Tobbaco Seeds", itemName = "Indian_Tobbaco_Seed", currencyType = "cash", sellprice = 1, randomprice = math.random( 0, 1), desc = " A handfull of Indian Tobbaco Seeds", category = "Misc" },
-    
+    -- Flowers 
+    { itemLabel = "Agarita Seed", itemName = "Agarita_Seed", currencyType = "cash", item_price = .25, randomprice = math.random(30, 55), desc = "Buy Agarita Seed", category = "Flowers" },  
 }
    
 -----------------------------------------------------------------------------
@@ -149,7 +134,7 @@ SeedsMarketItems_SELL = {
     -- Flowers 
     { itemLabel = "Agarita Seed", itemName = "Agarita_Seed", currencyType = "cash", item_price = .25, randomprice = math.random(30, 55), desc = "Sell Agarita Seed", category = "Flowers" },  
 
- }
+}
  
 
 -----------------------------------------------------------------------------
@@ -189,7 +174,7 @@ Config.SellItems = {
     --------------------------------------Vanhorn--------------------------------
     ----------------------------------------------------------------------------- 
         VanSeeds = SeedsMarketItems_SELL, 
-    }
+}
 
 
 -----------------------------------------------------------------------------
@@ -203,13 +188,13 @@ Config.SellItems = {
     -- desc = a description of the item
     -- category = where the item will be displayed at
  
-    SeedsMarketItems_BUY = {
+SeedsMarketItems_BUY = {
     -- Herbs        
     { itemLabel = "English Mace Seed", itemName = "English_Mace_Seed", currencyType = "cash", item_price = .25, randomprice = math.random(30, 55), desc = "Buy English Mace Seed", category = "Herbs" }, 
   
     -- Flowers 
         { itemLabel = "Agarita Seed", itemName = "Agarita_Seed", currencyType = "cash", item_price = .25, randomprice = math.random(30, 55), desc = "Buy Agarita Seed", category = "Flowers" },        
-   }
+}
 
 -----------------------------------------------------------------------------
 --------------------------------------BUY ITEMS ----------------------------
