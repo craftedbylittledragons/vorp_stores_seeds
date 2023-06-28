@@ -1,115 +1,20 @@
 ------------------------------------------------------------------------------------------------------
 -------------------------------------------- CLIENT --------------------------------------------------
-local OpenStores
-local CloseStores
-local PlayerJob
-local JobGrade
-local shopStocks = {} 
-local PromptGroup = GetRandomIntInRange(0, 0xffffff)
-local PromptGroup2 = GetRandomIntInRange(0, 0xffffff)
-local isInMenu = false
+OpenStores = 0
+CloseStores = 0
+PlayerJob = 0
+JobGrade = 0
+shopStocks = {} 
+PromptGroup = GetRandomIntInRange(0, 0xffffff)
+PromptGroup2 = GetRandomIntInRange(0, 0xffffff)
+isInMenu = false
+MyStoreIsOpen = {}
+MyStoreIsClosed = {}
 MenuData = {}
 
 TriggerEvent("menuapi:getData", function(call)
     MenuData = call
 end)
-
----------------- BLIPS ---------------------
-function AddBlip(Store)
-    if Config.Stores[Store].blipAllowed then
-        Config.Stores[Store].BlipHandle = N_0x554d9d53f696d002(1664425300, Config.Stores[Store].x,
-            Config.Stores[Store].y, Config.Stores[Store].z)
-        SetBlipSprite(Config.Stores[Store].BlipHandle, Config.Stores[Store].sprite, 1)
-        SetBlipScale(Config.Stores[Store].BlipHandle, 0.2)
-        _SetBlipName( Config.Stores[Store].BlipHandle, Config.Stores[Store].BlipName )
-        --Citizen.InvokeNative(0x9CB1A1623062F402, Config.Stores[Store].BlipHandle, Config.Stores[Store].BlipName)
-    end
-end
-
----------------- NPC ---------------------
-function LoadModel(model)
-    local model = GetHashKey(model)
-    RequestModel(model)
-    while not HasModelLoaded(model) do
-        RequestModel(model)
-        Citizen.Wait(100)
-    end
-end
-
-function SpawnNPC(Store)
-    local v = Config.Stores[Store]
-    LoadModel(v.NpcModel)
-    if v.NpcAllowed then
-        local npc = CreatePed(v.NpcModel, v.x, v.y, v.z, v.h, false, true, true, true)
-        _SetRandomOutfitVariation(npc)    
-        _PlaceEntityOnGroundProperly(npc)    
-        Wait(500)
-        SetEntityCanBeDamaged(npc, false)
-        SetEntityInvincible(npc, true)
-        Wait(500)
-        FreezeEntityPosition(npc, true)
-        SetBlockingOfNonTemporaryEvents(npc, true)
-        Config.Stores[Store].NPC = npc
-    end
-end
-
-function _SetBlipName( blip, name )
-    --SetBlipName(blip, name )
-    Citizen.InvokeNative(0x9CB1A1623062F402, blip, name )  
-    Wait(500)
-end 
-
-function _PlaceEntityOnGroundProperly(npc)
-    --PlaceEntityOnGroundProperly(npc, true)
-    Citizen.InvokeNative(0x9587913B9E772D29, npc, true)   
-end 
-
-function _SetRandomOutfitVariation(npc)
-    --SetRandomOutfitVariation(npc, true)
-    Citizen.InvokeNative(0x283978A15512B2FE, npc, true)   
-end 
-
-function _UiPromptSetUrgentPulsingEnabled(prompt, toggle)
-    --UiPromptSetUrgentPulsingEnabled(prompt, toggle)
-    Citizen.InvokeNative(0xC5F428EE08FA7F2C, prompt, toggle)  
-end
-
-function _UiPromptHasStandardModeCompleted(prompt)
-    --UiPromptHasStandardModeCompleted(prompt, toggle) -- toggle = 0
-    Citizen.InvokeNative(0xC92AC953F0A982AE, prompt)  
-end
-
------------------- PROMPTS ------------------
-function PromptSetUp()
-    local str = _U("SubPrompt")
-    OpenStores = PromptRegisterBegin()
-    PromptSetControlAction(OpenStores, Config.Key)
-    str = CreateVarString(10, 'LITERAL_STRING', str)
-    PromptSetText(OpenStores, str)
-    PromptSetEnabled(OpenStores, 1)
-    PromptSetVisible(OpenStores, 1)
-    PromptSetStandardMode(OpenStores, 1)
-    PromptSetGroup(OpenStores, PromptGroup)
-    _UiPromptSetUrgentPulsingEnabled(OpenStores, true)
-    --Citizen.InvokeNative(0xC5F428EE08FA7F2C, OpenStores, true)
-    PromptRegisterEnd(OpenStores)
-end
-
-function PromptSetUp2()
-    local str = _U("SubPrompt")
-    CloseStores = PromptRegisterBegin()
-    PromptSetControlAction(CloseStores, Config.Key)
-    str = CreateVarString(10, 'LITERAL_STRING', str)
-    PromptSetText(CloseStores, str)
-    PromptSetEnabled(CloseStores, 1)
-    PromptSetVisible(CloseStores, 1)
-    PromptSetStandardMode(CloseStores, 1)
-    PromptSetGroup(CloseStores, PromptGroup2)
-    _UiPromptSetUrgentPulsingEnabled(CloseStores, true)
-    --Citizen.InvokeNative(0xC5F428EE08FA7F2C, CloseStores, true)
-    PromptRegisterEnd(CloseStores)
-
-end
 
 function CheckJob(table, element)
     for k, v in pairs(table) do
@@ -120,11 +25,20 @@ function CheckJob(table, element)
     return false
 end
 
-------- STORES START ----------
-Citizen.CreateThread(function()
-    PromptSetUp()
-    PromptSetUp2()
+function fixNPCHeight(storeId)     
+    Citizen.CreateThread(function()                            
+        FreezeEntityPosition(Config.Stores[storeId].NPC, false)
+        Citizen.Wait(3000)  -- 3 seconds          
+        FreezeEntityPosition(Config.Stores[storeId].NPC, true)
+    end) 
+end 
 
+------- STORES STORE BLIPS ONLY ----------
+Citizen.CreateThread(function()
+    Citizen.Wait(20000)
+    while characterselected == false do 
+        Citizen.Wait(1000)
+    end 
     while true do
         Citizen.Wait(0)
         local player = PlayerPedId()
@@ -133,8 +47,9 @@ Citizen.CreateThread(function()
         local dead = IsEntityDead(player)
         local hour = GetClockHours()
 
+        -- make sure the player alive and menu is not open
         if isInMenu == false and not dead then
-            for storeId, storeConfig in pairs(Config.Stores) do
+            for storeId, storeConfig in pairs(Config.Stores) do                                
                 if storeConfig.StoreHoursAllowed then
                     if hour >= storeConfig.StoreClose or hour < storeConfig.StoreOpen then
                         if Config.Stores[storeId].BlipHandle then
@@ -146,125 +61,32 @@ Citizen.CreateThread(function()
                             DeletePed(Config.Stores[storeId].NPC)
                             SetEntityAsNoLongerNeeded(Config.Stores[storeId].NPC)
                             Config.Stores[storeId].NPC = nil
-                        end
-                        local coordsDist = vector3(coords.x, coords.y, coords.z)
-                        local coordsStore = vector3(storeConfig.x, storeConfig.y, storeConfig.z)
-                        local distance = #(coordsDist - coordsStore)
-
-                        if (distance <= storeConfig.distanceOpenStore) then
-                            sleep = false
-                            local label2 = CreateVarString(10, 'LITERAL_STRING',
-                                _U("closed") .. storeConfig.StoreOpen .. _U("am") .. storeConfig.StoreClose .. _U("pm"))
-                            PromptSetActiveGroupThisFrame(PromptGroup2, label2)
-
-                            if Citizen.InvokeNative(0xC92AC953F0A982AE, CloseStores) then
-                            --if _UiPromptHasStandardModeCompleted(CloseStores) then
-                                Wait(100)
-                                TriggerEvent("vorp:TipRight",
-                                    _U("closed") ..
-                                    storeConfig.StoreOpen .. _U("am") .. storeConfig.StoreClose .. _U("pm"), 3000)
-                            end
-                        end
+                        end                         
+                        MyStoreIsOpen[storeId] = 0
+                        MyStoreIsClosed[storeId] = 1
                     elseif hour >= storeConfig.StoreOpen then
                         if not Config.Stores[storeId].BlipHandle and storeConfig.blipAllowed then
                             AddBlip(storeId)
                         end
                         if not Config.Stores[storeId].NPC and storeConfig.NpcAllowed then
-                            SpawnNPC(storeId)
-                        end
-                        -- ## run this before distance check  no need to run a code that is no meant for the client ## --
-                        if not next(storeConfig.AllowedJobs) then -- if jobs empty then everyone can use
-                            local coordsDist = vector3(coords.x, coords.y, coords.z)
-                            local coordsStore = vector3(storeConfig.x, storeConfig.y, storeConfig.z)
-                            local distance = #(coordsDist - coordsStore)
-
-                            if (distance <= storeConfig.distanceOpenStore) then -- check distance
-                                sleep = false
-                                local label = CreateVarString(10, 'LITERAL_STRING', storeConfig.PromptName)
-                                PromptSetActiveGroupThisFrame(PromptGroup, label)
-                                if Citizen.InvokeNative(0xC92AC953F0A982AE, OpenStores) then -- if all pass open menu
-                                --if _UiPromptHasStandardModeCompleted(OpenStores) then                                    
-                                    OpenCategory(storeId)
-                                    DisplayRadar(false)
-                                    TaskStandStill(player, -1)
-                                end
-                            end
-                        else -- job only
-                            local coordsDist = vector3(coords.x, coords.y, coords.z)
-                            local coordsStore = vector3(storeConfig.x, storeConfig.y, storeConfig.z)
-                            local distance = #(coordsDist - coordsStore)
-
-                            if (distance <= storeConfig.distanceOpenStore) then
-                                TriggerServerEvent(GetCurrentResourceName()..":getPlayerJob")
-                                Wait(200)
-                                if PlayerJob then
-                                    if CheckJob(storeConfig.AllowedJobs, PlayerJob) then
-                                        if tonumber(storeConfig.JobGrade) <= tonumber(JobGrade) then
-                                            sleep = false
-                                            local label = CreateVarString(10, 'LITERAL_STRING', storeConfig.PromptName)
-
-                                            PromptSetActiveGroupThisFrame(PromptGroup, label)
-                                            if Citizen.InvokeNative(0xC92AC953F0A982AE, OpenStores) then
-                                            --if _UiPromptHasStandardModeCompleted(OpenStores) then                                                 
-                                                OpenCategory(storeId)
-                                                DisplayRadar(false)
-                                                TaskStandStill(player, -1)
-                                            end
-                                        end
-                                    end
-                                 end
-                            end
-                        end
-                    end
+                            SpawnNPC(storeId) 
+                            Citizen.Wait(3000)
+                            fixNPCHeight(storeId) 
+                        end 
+                        MyStoreIsOpen[storeId] = 1
+                        MyStoreIsClosed[storeId] = 0  
+                    end 
                 else
                     if not Config.Stores[storeId].BlipHandle and storeConfig.blipAllowed then
                         AddBlip(storeId)
                     end
                     if not Config.Stores[storeId].NPC and storeConfig.NpcAllowed then
-                        SpawnNPC(storeId)
-                    end
-                    -- ## run this before distance check  no need to run a code that is no meant for the client ## --
-                    if not next(storeConfig.AllowedJobs) then -- if jobs empty then everyone can use
-                        local coordsDist = vector3(coords.x, coords.y, coords.z)
-                        local coordsStore = vector3(storeConfig.x, storeConfig.y, storeConfig.z)
-                        local distance = #(coordsDist - coordsStore)
-
-                        if (distance <= storeConfig.distanceOpenStore) then -- check distance
-                            sleep = false
-                            local label = CreateVarString(10, 'LITERAL_STRING', storeConfig.PromptName)
-                            PromptSetActiveGroupThisFrame(PromptGroup, label)
-                            --if _UiPromptHasStandardModeCompleted(OpenStores) then
-                            if Citizen.InvokeNative(0xC92AC953F0A982AE, OpenStores) then -- iff all pass open menu
-                                OpenCategory(storeId)
-                                DisplayRadar(false)
-                                TaskStandStill(player, -1)
-                            end
-                        end
-                    else -- job only
-                        local coordsDist = vector3(coords.x, coords.y, coords.z)
-                        local coordsStore = vector3(storeConfig.x, storeConfig.y, storeConfig.z)
-                        local distance = #(coordsDist - coordsStore)
-
-                        if (distance <= storeConfig.distanceOpenStore) then
-                            TriggerServerEvent(GetCurrentResourceName()..":getPlayerJob")
-                            Wait(200)
-                            if PlayerJob then
-                                if CheckJob(storeConfig.AllowedJobs, PlayerJob) then
-                                    if tonumber(storeConfig.JobGrade) <= tonumber(JobGrade) then
-                                        sleep = false
-                                        local label = CreateVarString(10, 'LITERAL_STRING', storeConfig.PromptName)
-                                        PromptSetActiveGroupThisFrame(PromptGroup, label)
-                                        --if _UiPromptHasStandardModeCompleted(OpenStores) then
-                                        if Citizen.InvokeNative(0xC92AC953F0A982AE, OpenStores) then
-                                            OpenCategory(storeId)
-                                            DisplayRadar(false)
-                                            TaskStandStill(player, -1)
-                                        end
-                                    end
-                                end
-                            end        
-                        end 
-                    end
+                        SpawnNPC(storeId)     
+                        Citizen.Wait(3000)
+                        fixNPCHeight(storeId)         
+                    end             
+                    MyStoreIsOpen[storeId] = 1
+                    MyStoreIsClosed[storeId] = 0                
                 end
             end
         end
@@ -274,382 +96,103 @@ Citizen.CreateThread(function()
     end
 end)
 
-
----- items category ------
-function OpenCategory(storeId)
-    print("OpenCategory")
-    MenuData.CloseAll()
-    isInMenu = true
-
-    local elements = {}
-
-    for k, v in pairs(Config.Stores[storeId].category) do
-        print("k, v",k, v)
-        elements[#elements + 1] = {
-            label = v,
-            value = v,
-            desc = _U("choose_category")
-        }
+------- STORES START prompt and menu calls ----------
+Citizen.CreateThread(function()
+    Citizen.Wait(20000)
+    while characterselected == false do 
+        Citizen.Wait(1000)
     end
+    TriggerServerEvent(GetCurrentResourceName()..":getPlayerJob")  
+    PromptSetUp()
+    PromptSetUp2()
+    local JustEnteredRange = 0
+    local job_check_ran = 0
+    local loopcounters = 0
+    while true do
+        Citizen.Wait(0)
+        local player = PlayerPedId()
+        local coords = GetEntityCoords(player)
+        local sleep = false
+        local dead = IsEntityDead(player)
+        local hour = GetClockHours() 
 
-    MenuData.Open('default', GetCurrentResourceName(), 'menuapi' .. storeId, {
-        title = Config.Stores[storeId].storeName,
-        subtext = _U("SubMenu"),
-        align = Config.Align,
-        elements = elements
-
-    }, function(data, menu)
-        OpenSubMenu(storeId, data.current.value)
-    end, function(data, menu)
-        menu.close()
-        isInMenu = false
-        ClearPedTasksImmediately(PlayerPedId())
-        DisplayRadar(true)
-    end)
-
-end
-
--- sell only
-function OpenSubMenu(storeId, category)
-    print("OpenSubMenu")
-    MenuData.CloseAll()
-    isInMenu = true
-    local elements = {}
-
-    for k, v in pairs(Config.Stores[storeId].storeType) do
-        print("k, v",k, v)
-        elements[#elements + 1] = {
-            label = v,
-            value = v,
-            desc = _U("chooseoption")
-        }
-    end
-
-    MenuData.Open('default', GetCurrentResourceName(), 'menuapi' .. storeId .. category, {
-        title = Config.Stores[storeId].storeName,
-        subtext = _U("SubMenu"),
-        align = Config.Align,
-        elements = elements,
-        lastmenu = "OpenCategory"
-
-    }, function(data, menu)
-        if (data.current == "backup") then
-            _G[data.trigger](storeId, category)
-        end
-
-        if (data.current.value == "Sell") then --translate here same as the config
-            print("sell")
-            OpenSellMenu(storeId, category)
-        end
-
-        if (data.current.value == "Buy") then --translate here same as the config
-            print("buy")
-            OpenBuyMenu(storeId, category)
-        end
-
-    end, function(data, menu)
-        menu.close()
-        isInMenu = false
-        ClearPedTasksImmediately(PlayerPedId())
-        DisplayRadar(true)
-    end)
-end
-
--- sell
-function OpenSellMenu(storeId, category)
-    print("OpenSellMenu")
-    MenuData.CloseAll()
-    isInMenu = true
-    local menuElements = {}
-    local player = PlayerPedId()
-    local storeConfig = Config.Stores[storeId]
-    local elementIndex = 1
-    TriggerServerEvent(GetCurrentResourceName()..":getShopStock")
-    Citizen.Wait(100)
-     
-    for index, storeItem in ipairs(Config.SellItems[storeId]) do
-        print("SellItems", index, storeItem)
-        local itemFound = false
-
-        if storeItem.category == category then
-            local ctp = ""
-            if storeItem.currencyType == "gold" then
-                ctp = "#"
-            else
-                ctp = "$"
-            end
-            if shopStocks[storeId] then
-                for k, items in pairs(shopStocks[storeId]) do
-                    if items.itemName == storeItem.itemName and items.type == "sell" then
-                        itemFound = true
-                        menuElements[elementIndex] = {
-                            itemHeight = "2vh",
-                            label = "<span style=font-size:15px;text-align:center;>" ..
-                            items.amount .. "</span>".."<img style='max-height:45px;max-width:45px;float: left;text-align: center; margin-top: -5px;' src='nui://vorp_inventory/html/img/items/" ..
-                                storeItem.itemName .. ".png'><span style=margin-left:40px;font-size:25px;text-align:center;>" ..
-                                storeItem.itemLabel .. "</span>",
-                            value = "sell" .. tostring(elementIndex),
-                            desc = "" ..
-                                '<span style="font-family: crock; src:nui://menuapi/html/fonts/crock.ttf) format("truetype")</span>' ..
-                                _U("sellfor") .. '<span style="margin-left:90px;">' .. '<span style="font-size:25px;">' .. ctp ..
-                                '</span>' .. '<span style="font-size:30px;">' .. string.format("%.2f", storeItem.sellprice) ..
-                                "</span><span style='color: Yellow;'>  " .. storeItem.currencyType .. "</span><br><br><br>" ..
-                                storeItem.desc,
-                            info = storeItem
-            
-                        }            
-                        elementIndex = elementIndex + 1    
-                    end
-                end  
-            end
-            
-            if not itemFound then
-                menuElements[elementIndex] = {
-                    itemHeight = "2vh",
-                    label = "<span style=font-size:15px;text-align:left;>∞</span>".."<img style='max-height:45px;max-width:45px;float: left;text-align: center; margin-top: -5px;' src='nui://vorp_inventory/html/img/items/" ..
-                        storeItem.itemName .. ".png'><span style=margin-left:40px;font-size:25px;text-align:center;>" ..
-                        storeItem.itemLabel .. "</span>",
-                    value = "sell" .. tostring(elementIndex),
-                    desc = "" ..
-                        '<span style="font-family: crock; src:nui://menuapi/html/fonts/crock.ttf) format("truetype")</span>' ..
-                        _U("sellfor") .. '<span style="margin-left:90px;">' .. '<span style="font-size:25px;">' .. ctp ..
-                        '</span>' .. '<span style="font-size:30px;">' .. string.format("%.2f", storeItem.sellprice) ..
-                        "</span><span style='color: Yellow;'>  " .. storeItem.currencyType .. "</span><br><br><br>" ..
-                        storeItem.desc,
-                    info = storeItem
-    
-                }    
-                elementIndex = elementIndex + 1               
-            end            
-        end
-    end
-
-    MenuData.Open('default', GetCurrentResourceName(), 'menuapi' .. storeId .. category, {
-        title = storeConfig.storeName,
-        subtext = _U("sellmenu"),
-        align = Config.Align,
-        elements = menuElements,
-        lastmenu = "OpenSubMenu"
-    }, function(data, menu)
-        if (data.current == "backup") then
-            _G[data.trigger](storeId, category)
-        else
-
-            local ItemName = data.current.info.itemName
-            local ItemLabel = data.current.info.itemLabel
-            local currencyType = data.current.info.currencyType
-            local sellPrice = data.current.info.sellprice
-
-            local myInput = {
-                type = "enableinput", -- dont touch
-                inputType = "input",
-                button = _U("confirm"), -- button name
-                placeholder = _U("insertamount"), -- placeholdername
-                style = "block", --- dont touch
-                attributes = {
-                    inputHeader = _U("amount"), -- header
-                    type = "number", -- inputype text, number,date.etc if number comment out the pattern
-                    pattern = "[0-9]", -- regular expression validated for only numbers "[0-9]", for letters only [A-Za-z]+   with charecter limit  [A-Za-z]{5,20}     with chareceter limit and numbers [A-Za-z0-9]{5,}
-                    title = _U("must"), -- if input doesnt match show this message
-                    style = "border-radius: 10px; background-color: ; border:none;" -- style  the inptup
-                }
-            }
-            if Config.Align == "center" then
-                MenuData.CloseAll()
-                ClearPedTasksImmediately(player)
-                isInMenu = false
-                DisplayRadar(true)
-            end
-
-            TriggerEvent("vorpinputs:advancedInput", json.encode(myInput), function(result)
-                local qty = tonumber(result)
-                if qty ~= nil and qty ~= 0 and qty > 0 then
-                    TriggerServerEvent(GetCurrentResourceName()..":sell", ItemLabel, ItemName, currencyType, sellPrice, qty,storeId) -- sell it
-                else
-                    TriggerEvent("vorp:TipRight", _U("insertamount"), 3000)
+        if isInMenu == false and not dead then
+            for storeId, storeConfig in pairs(Config.Stores) do                
+                local coordsDist = vector3(coords.x, coords.y, coords.z)
+                local coordsStore = vector3(storeConfig.x, storeConfig.y, storeConfig.z)
+                local distance = Vdist(coordsDist, coordsStore) 
+                --local distance = #(coordsDist - coordsStore)  -- does not return distance.                
+                if (distance <= storeConfig.distanceOpenStore) then                       
+                    if MyStoreIsOpen[storeId] == 1 and MyStoreIsClosed[storeId] == 0 then                         
+                        if JustEnteredRange == 0 and storeConfig.NpcAllowed == true then 
+                            JustEnteredRange = 1                                        
+                            Citizen.CreateThread(function()                                 
+                                SetBlockingOfNonTemporaryEvents(Config.Stores[storeId].NPC, false)
+                                FreezeEntityPosition(Config.Stores[storeId].NPC, false)
+                                TaskTurnPedToFaceEntity(Config.Stores[storeId].NPC, player, -1) 
+                                --print("NPC face players")
+                            end)                                         
+                        end                         
+                        if type(storeConfig.AllowedJobs) == "table" then 
+                            if #storeConfig.AllowedJobs >= 1 then  
+                                -- add a call so that if job set in vorp core, it updates store as well.
+                                if PlayerJob and CheckJob(storeConfig.AllowedJobs, PlayerJob) then                                    
+                                    --print("Job Lock set, and player has the correct job.")      
+                                    if tonumber(storeConfig.JobGrade) <= tonumber(JobGrade) then  
+                                        local label = CreateVarString(10, 'LITERAL_STRING', storeConfig.PromptName)    
+                                        PromptSetActiveGroupThisFrame(PromptGroup, label)
+                                        if Citizen.InvokeNative(0xC92AC953F0A982AE, OpenStores) then
+                                        --if _UiPromptHasStandardModeCompleted(OpenStores) then    
+                                            sleep = true                                             
+                                            OpenCategory(storeId)
+                                            DisplayRadar(false)
+                                            TaskStandStill(player, -1) 
+                                        end 
+                                    end  
+                                else 
+                                    --print("Job Lock set, and player job does not match.")      
+                                    local label = CreateVarString(10, 'LITERAL_STRING', "Access Denied")    
+                                    PromptSetActiveGroupThisFrame(PromptGroup, label)                                    
+                                end  
+                            else -- no job lock, table is empty {}    
+                                --print("Job Lock is empty table.")      
+                                local label = CreateVarString(10, 'LITERAL_STRING', storeConfig.PromptName)
+                                PromptSetActiveGroupThisFrame(PromptGroup, label)
+                                if Citizen.InvokeNative(0xC92AC953F0A982AE, OpenStores) then -- if all pass open menu
+                                --if _UiPromptHasStandardModeCompleted(OpenStores) then                                       
+                                    sleep = true                                                         
+                                    OpenCategory(storeId)
+                                    DisplayRadar(false)
+                                    TaskStandStill(player, -1)
+                                end 
+                            end
+                        else -- some people set the job lock to 0, this is so it doesn't break the store     
+                            --print("Job Lock set to 0.")     
+                            local label = CreateVarString(10, 'LITERAL_STRING', storeConfig.PromptName)
+                            PromptSetActiveGroupThisFrame(PromptGroup, label)
+                            if Citizen.InvokeNative(0xC92AC953F0A982AE, OpenStores) then -- if all pass open menu
+                            --if _UiPromptHasStandardModeCompleted(OpenStores) then                                 
+                                sleep = true                                                           
+                                OpenCategory(storeId)
+                                DisplayRadar(false)
+                                TaskStandStill(player, -1)
+                            end 
+                        end
+                    end 
+                else          
+                    if JustEnteredRange == 1 and storeConfig.NpcAllowed == true then                              
+                        ClearPedTasksImmediately(Config.Stores[storeId].NPC)  
+                        SetBlockingOfNonTemporaryEvents(Config.Stores[storeId].NPC, true)
+                        FreezeEntityPosition(Config.Stores[storeId].NPC, true) 
+                        --print("Player left, freeze npc")
+                        JustEnteredRange = 0   
+                    end 
                 end
-            end)
-        end
-    end, function(data, menu)
-        menu.close()
-        ClearPedTasksImmediately(player)
-        isInMenu = false
-        DisplayRadar(true)
-    end)
-
-end
-
---- buy
-function OpenBuyMenu(storeId, category)
-    print("OpenBuyMenu")
-    MenuData.CloseAll()
-    isInMenu = true
-    local menuElements = {}
-    local player = PlayerPedId()
-    local storeConfig = Config.Stores[storeId]
-    local elementIndex = 1
-    TriggerServerEvent(GetCurrentResourceName()..":getShopStock")
-    Citizen.Wait(100)
-
-    for index, storeItem in ipairs(Config.BuyItems[storeId]) do
-        print("SellItems", index, storeItem)
-        local itemFound = false
-
-        if storeItem.category == category then
-            local ctp = ""
-            if storeItem.currencyType == "gold" then
-                ctp = "#"
-            else
-                ctp = "$"
             end
-            if shopStocks[storeId] then
-                for k, items in pairs(shopStocks[storeId]) do
-                    if items.itemName == storeItem.itemName and items.type == "buy" then
-                        itemFound = true
-                        menuElements[elementIndex] = {
-                            itemHeight = "2vh",
-                            label = "<span style=font-size:15px;text-align:center;>" ..
-                            items.amount .. "</span>".." <img style='max-height: 40px;max-width: 40px;float: left;text-align: center;margin-top: -5px;' src='nui://vorp_inventory/html/img/items/" ..
-                                storeItem.itemName .. ".png'><span style=margin-left:40px;font-size:25px;text-align:center;>" ..
-                                storeItem.itemLabel .. "</span>",
-                            value = "sell" .. tostring(elementIndex),
-                            desc = "" ..
-                                '<span style="font-family: crock; src:nui://menuapi/html/fonts/crock.ttf) format("truetype")</span>' ..
-                                _U("buyfor") .. '<span style="margin-left:90px;">' .. '<span style="font-size:25px;">' .. ctp ..
-                                '</span>' .. '<span style="font-size:30px;">' .. string.format("%.2f", storeItem.buyprice) ..
-                                "</span><span style='color:Yellow;'>  " .. storeItem.currencyType .. "</span><br><br><br>" ..
-                                storeItem.desc,
-                            info = storeItem            
-                        }            
-                        elementIndex = elementIndex + 1    
-                    end
-                end  
+        else 
+            if sleep == true then
+                Citizen.Wait(1000)
             end
-            
-            if not itemFound then
-                menuElements[elementIndex] = {
-                    itemHeight = "2vh",
-                    label = "<span style=font-size:15px;text-align:left;>∞</span>".. "<img style='max-height: 40px;max-width: 40px;float: left;text-align: center;margin-top: -5px;' src='nui://vorp_inventory/html/img/items/" ..
-                        storeItem.itemName .. ".png'><span style=margin-left:40px;font-size:25px;text-align:center;>" ..
-                        storeItem.itemLabel .. "</span>",
-                    value = "sell" .. tostring(elementIndex),
-                    desc = "" ..
-                        '<span style="font-family: crock; src:nui://menuapi/html/fonts/crock.ttf) format("truetype")</span>' ..
-                        _U("buyfor") .. '<span style="margin-left:90px;">' .. '<span style="font-size:25px;">' .. ctp ..
-                        '</span>' .. '<span style="font-size:30px;">' .. string.format("%.2f", storeItem.buyprice) ..
-                        "</span><span style='color:Yellow;'>  " .. storeItem.currencyType .. "</span><br><br><br>" ..
-                        storeItem.desc,
-                    info = storeItem
-    
-                }    
-                elementIndex = elementIndex + 1                
-            end            
-        end
-    end
-
-    MenuData.Open('default', GetCurrentResourceName(), 'menuapi' .. storeId .. category, {
-        title = storeConfig.storeName,
-        subtext = "buy menu",
-        align = Config.Align,
-        elements = menuElements,
-        lastmenu = "OpenSubMenu"
-
-    }, function(data, menu)
-        if (data.current == "backup") then
-            _G[data.trigger](storeId, category)
-        else
-
-            local ItemName = data.current.info.itemName
-            local ItemLabel = data.current.info.itemLabel
-            local currencyType = data.current.info.currencyType
-            local buyPrice = data.current.info.buyprice
-
-            local myInput = {
-                type = "enableinput", -- dont touch
-                inputType = "input",
-                button = _U("confirm"), -- button name
-                placeholder = _U("insertamount"), -- placeholdername
-                style = "block", --- dont touch
-                attributes = {
-                    inputHeader = _U("amount"), -- header
-                    type = "number", -- inputype text, number,date.etc if number comment out the pattern
-                    pattern = "[0-9]", -- regular expression validated for only numbers "[0-9]", for letters only [A-Za-z]+   with charecter limit  [A-Za-z]{5,20}     with chareceter limit and numbers [A-Za-z0-9]{5,}
-                    title = _U("must"), -- if input doesnt match show this message
-                    style = "border-radius: 10px; background-color: ; border:none;" -- style  the inptup
-                }
-            }
-            if Config.Align == "center" then
-                MenuData.CloseAll()
-                ClearPedTasksImmediately(player)
-                isInMenu = false
-                DisplayRadar(true)
-            end
-
-            TriggerEvent("vorpinputs:advancedInput", json.encode(myInput), function(result)
-
-                local qty = tonumber(result)
-                if qty ~= nil and qty ~= 0 and qty > 0 then
-
-                    TriggerServerEvent(GetCurrentResourceName()..":buy", ItemLabel, ItemName, currencyType, buyPrice, qty,storeId) -- sell it
-                else
-                    TriggerEvent("vorp:TipRight", _U("insertamount"), 3000)
-                end
-
-            end)
-
-        end
-    end, function(data, menu)
-        menu.close()
-        ClearPedTasksImmediately(player)
-        isInMenu = false
-        DisplayRadar(true)
-    end)
-
-end
-
-RegisterNetEvent(GetCurrentResourceName()..":sendShopStock")
-AddEventHandler(GetCurrentResourceName()..":sendShopStock", function(stock)
-    shopStocks = stock
-end)
-
-RegisterNetEvent(GetCurrentResourceName()..":sendPlayerJob")
-AddEventHandler(GetCurrentResourceName()..":sendPlayerJob", function(Job, grade)
-    PlayerJob = Job
-    JobGrade = grade
-end)
-
-RegisterNetEvent(GetCurrentResourceName()..":RefreshStorePrices")
-AddEventHandler(GetCurrentResourceName()..":RefreshStorePrices", function(SellItems, BuyItems)
-    print("refresh")
-    Config.SellItems = SellItems
-    Config.BuyItems = BuyItems
-end)
-
-AddEventHandler('onClientResourceStart', function(resourceName)
-    if (GetCurrentResourceName() ~= resourceName) then
-        return
-    end
-    Wait(1000)
-    TriggerServerEvent(GetCurrentResourceName()..":GetRefreshedPrices")
-end)
-
-AddEventHandler('onResourceStop', function(resourceName)
-    if (GetCurrentResourceName() ~= resourceName) then
-        return
-    end
-    if isInMenu == true then
-        ClearPedTasksImmediately(PlayerPedId())
-        PromptDelete(OpenStores)
-        MenuData.CloseAll()
-    end
-    for i, v in pairs(Config.Stores) do
-        if v.BlipHandle then
-            RemoveBlip(v.BlipHandle)
-        end
-        if v.NPC then
-            DeleteEntity(v.NPC)
-            DeletePed(v.NPC)
-            SetEntityAsNoLongerNeeded(v.NPC)
-        end
+        end 
     end
 end)

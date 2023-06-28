@@ -1,7 +1,18 @@
+<1.6.3>
+- Fixed Set Job issue, relog is not necessary anymore
+- Fixed joblock store menu flicker - removed job query and wait
+- Updated default config files for pharmacy, added medic
+- Updated default config files for seeds, added seeds, was copy of saloon config
+- Added store clerk turns to face player.
+<1.6.2>
+- Added floating npc fix
+- updated sell and buy price to be item price (avoid user errors)
+- added price formating to limit to 2 decimal places
+- updated config files to have 1 store and limited items for testing.
 <1.6.1>
 --- brach-diverged 
-- This version is for blacksmith items and stores only. 
-- Changed all event calls for 'vorp' or 'vorp_stores' to be GetResourceName so the script isolates it's calls to it's self.
+- This version is for seeds items and stores only. 
+- Changed all event calls for 'vorp' or 'vorp_stores' to be GetResourceName so the script isolates it's calls to it's 
 <1.6>
 - fix for npcs not spawning when  StoreHoursAllowed is set to false
 - update client.lua

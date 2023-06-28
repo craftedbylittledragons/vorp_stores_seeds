@@ -1,15 +1,24 @@
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------- SERVER SIDE ----------------------------------------------------
-local VORPcore = {}
-local VORPinv
 
-TriggerEvent("getCore", function(core)
-    VORPcore = core
-end)
+VORPcore = {}
+VORPinv = {}
 
-VORPinv = exports.vorp_inventory:vorp_inventoryApi()
+function CallTheCore()
+    TriggerEvent("getCore", function(core)
+        VORPcore = core
+    end)
+end     
 
-local storeLimits = {}
+function CallTheInventory()
+    VORPinv = exports.vorp_inventory:vorp_inventoryApi()
+end 
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------- SERVER SIDE ----------------------------------------------------
+CallTheCore()
+CallTheInventory() 
+
+storeLimits = {}
 
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------- Init Store Limits ----------------------------------------------
@@ -182,13 +191,32 @@ AddEventHandler(GetCurrentResourceName()..':getShopStock', function()
 end)
 
 -------------------- GetJOB --------------------
+RegisterServerEvent('vorp:setJob')
+AddEventHandler('vorp:setJob', function(--[[source]] targetID, newjob, newgrade)
+    print('vorp:setJob', targetID, newjob, newgrade)    
+	local _source = source
+    local _newjob = newjob
+    local _newgrade = newgrade		   
+    if _source == nil or _source == "" then _source = targetID end 
+    if _newjob == nil then _newjob = "unemployed" end 
+    if _newgrade == nil then  _newgrade = "0" end       
+    if VORPcore.getUser(_source) then        
+        --TriggerEvent("vorp:setJob", _source, _newjob, _newgrade) 
+        print(Config.ScriptName .." - Player[".._source.."] job and grade was set to ["..newjob.."],["..newgrade.."]")
+        VORPcore.NotifyRightTip(_source,"STORE: Your job changed to " .. _newjob .. "[".._newgrade.."]", 5000)        
+        TriggerClientEvent(GetCurrentResourceName()..':sendPlayerJob', _source, newjob, newgrade)       
+    end
+    Citizen.Wait(1000)
+    CallTheCore() -- reload character data?
+end)  
+ 
+
 RegisterServerEvent(GetCurrentResourceName()..':getPlayerJob')
 AddEventHandler(GetCurrentResourceName()..':getPlayerJob', function()
     local _source = source
     local Character = VORPcore.getUser(_source).getUsedCharacter
     local CharacterJob = Character.job
     local CharacterGrade = Character.jobGrade
-
     TriggerClientEvent(GetCurrentResourceName()..':sendPlayerJob', _source, CharacterJob, CharacterGrade)
 end)
 
@@ -199,11 +227,11 @@ AddEventHandler('onResourceStart', function(resourceName)
     for storeId, storeConfig in pairs(Config.Stores) do
         if storeConfig.RandomPrices then
             for index, storeItem in ipairs(Config.SellItems[storeId]) do
-                Config.SellItems[storeId][index].sellprice = storeItem.randomprice
+                Config.SellItems[storeId][index].item_price = storeItem.randomprice
 
             end
             for index, storeItem in ipairs(Config.BuyItems[storeId]) do
-                Config.BuyItems[storeId][index].buyprice = storeItem.randomprice
+                Config.BuyItems[storeId][index].item_price = storeItem.randomprice
             end
         end
     end
